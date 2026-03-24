@@ -29,12 +29,20 @@ pub fn initialize(
     // Store initial config
     env.storage().instance().set(&DataKey::Initialized, &true);
     env.storage().instance().set(&DataKey::Admin, admin);
-    env.storage().instance().set(&DataKey::FeeCollector, fee_collector);
+    env.storage()
+        .instance()
+        .set(&DataKey::FeeCollector, fee_collector);
     env.storage().instance().set(&DataKey::FeePercent, &fee_bps);
-    env.storage().instance().set(&DataKey::TotalFeesCollected, &0_i128);
-    env.storage().instance().set(&DataKey::TotalCreators, &0_u32);
+    env.storage()
+        .instance()
+        .set(&DataKey::TotalFeesCollected, &0_i128);
+    env.storage()
+        .instance()
+        .set(&DataKey::TotalCreators, &0_u32);
     env.storage().instance().set(&DataKey::TipCount, &0_u32);
-    env.storage().instance().set(&DataKey::TotalTipsVolume, &0_i128);
+    env.storage()
+        .instance()
+        .set(&DataKey::TotalTipsVolume, &0_i128);
 
     Ok(())
 }
