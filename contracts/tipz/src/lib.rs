@@ -19,6 +19,7 @@ mod errors;
 mod events;
 mod fees;
 mod leaderboard;
+mod profile;
 mod storage;
 mod tips;
 mod types;
@@ -57,16 +58,23 @@ impl TipzContract {
 
     /// Register a new creator profile.
     pub fn register_profile(
-        _env: Env,
-        _caller: Address,
-        _username: String,
-        _display_name: String,
-        _bio: String,
-        _image_url: String,
-        _x_handle: String,
+        env: Env,
+        caller: Address,
+        username: String,
+        display_name: String,
+        bio: String,
+        image_url: String,
+        x_handle: String,
     ) -> Result<Profile, ContractError> {
-        // TODO: Implement in issue #1 - Profile Registration
-        Err(ContractError::NotInitialized)
+        profile::register_profile(
+            &env,
+            caller,
+            username,
+            display_name,
+            bio,
+            image_url,
+            x_handle,
+        )
     }
 
     /// Update an existing profile (owner only).
