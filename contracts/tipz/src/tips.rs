@@ -116,4 +116,63 @@ pub fn send_tip(
     Ok(())
 }
 
-// TODO: Implement withdraw_tips in issue #10
+/// Withdraw accumulated tips from the caller's profile balance.
+///
+/// The withdrawal amount is split into a protocol fee (sent to the fee
+/// collector) and the net amount (sent to the creator). The fee is calculated
+/// using the current `fee_bps` setting.
+///
+/// # Parameters
+/// - `caller` – the creator withdrawing their tips (must be registered)
+/// - `amount` – the gross withdrawal amount in stroops (must be > 0 and ≤ balance)
+///
+/// # Errors
+/// - [`ContractError::NotRegistered`] if `caller` has no profile
+/// - [`ContractError::InvalidAmount`] if `amount` is ≤ 0
+/// - [`ContractError::InsufficientBalance`] if `amount` > profile balance or contract lacks XLM
+pub fn withdraw_tips(env: &Env, caller: &Address, amount: i128) -> Result<(), ContractError> {
+    caller.require_auth();
+
+    if !storage::has_profile(env, caller) {
+        return Err(ContractError::NotRegistered);
+    }
+
+    if amount <= 0 {
+        return Err(ContractError::InvalidAmount);
+    }
+
+    let mut profile = storage::get_profile(env, caller);
+
+    if profile.balance < amount {
+        return Err(ContractError::InsufficientBalance);
+    }
+
+    // Calculate fee and net amount
+    let fee_bps = storage::get_fee_bps(env);
+    let (fee, net) = crate::fees::calculate_fee(amount, fee_bps)?;
+
+    let contract_address = env.current_contract_address();
+    let fee_collector = storage::get_fee_collector(env);
+
+    // Transfer net amount to creator
+    token::transfer_xlm(env, &contract_address, caller, net)?;
+
+    // Transfer fee to collector (if fee > 0)
+    if fee > 0 {
+        token::transfer_xlm(env, &contract_address, &fee_collector, fee)?;
+    }
+
+    // Update profile balance
+    profile.balance -= amount;
+    storage::set_profile(env, &profile);
+
+    // Update global fees counter
+    if fee > 0 {
+        storage::add_to_fees(env, fee);
+    }
+
+    // Emit withdrawal event
+    crate::events::emit_tips_withdrawn(env, caller, amount, fee);
+
+    Ok(())
+}

@@ -148,9 +148,8 @@ impl TipzContract {
     }
 
     /// Withdraw accumulated tips (fee deducted).
-    pub fn withdraw_tips(_env: Env, _caller: Address, _amount: i128) -> Result<(), ContractError> {
-        // TODO: Implement in issue #10 - Withdraw Tips
-        Err(ContractError::NotInitialized)
+    pub fn withdraw_tips(env: Env, caller: Address, amount: i128) -> Result<(), ContractError> {
+        tips::withdraw_tips(&env, &caller, amount)
     }
 
     /// Get a single tip record by its ID.
