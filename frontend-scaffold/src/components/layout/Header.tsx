@@ -71,6 +71,12 @@ const Header: React.FC = () => {
           >
             Dashboard
           </Link>
+          <Link
+            to="/profile"
+            className="font-bold uppercase text-sm tracking-wide hover:underline"
+          >
+            Profile
+          </Link>
         </nav>
 
         <div className="flex items-center gap-4">
@@ -142,6 +148,13 @@ const Header: React.FC = () => {
                 className="border-2 border-black bg-white px-4 py-3 font-bold uppercase tracking-wide"
               >
                 Dashboard
+              </Link>
+              <Link
+                to="/profile"
+                onClick={closeMobileMenu}
+                className="border-2 border-black bg-white px-4 py-3 font-bold uppercase tracking-wide"
+              >
+                Profile
               </Link>
 
               <Button className="w-full" onClick={handleWalletAction}>
