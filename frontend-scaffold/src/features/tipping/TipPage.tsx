@@ -10,14 +10,15 @@ import Avatar from "../../components/ui/Avatar";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import Textarea from "../../components/ui/Textarea";
-import { useTipz, useWallet } from "../../hooks";
+import { useWallet } from "../../hooks";
 import { mockProfile, mockTips } from "../mockData";
 import TipAmountInput from "./TipAmountInput";
+import TipResult from "./TipResult";
+import { useTipFlow } from "./useTipFlow";
 
 const TipPage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const { connected, connect } = useWallet();
-  const { sendTip, txHash, txStatus, error, sending, reset } = useTipz();
   const [amount, setAmount] = useState("5");
   const [message, setMessage] = useState("");
 
@@ -25,10 +26,11 @@ const TipPage: React.FC = () => {
     ...mockProfile,
     username: username || mockProfile.username,
   };
+  const { step, goToConfirm, confirmAndSign, reset, error, txHash } = useTipFlow(creator.owner);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await sendTip(creator.owner, amount, message);
+    goToConfirm(amount, message);
   };
 
   return (
@@ -93,8 +95,18 @@ const TipPage: React.FC = () => {
             </div>
           )}
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <TipAmountInput amount={amount} onChange={setAmount} balance={creator.balance} />
+          {step === "success" || step === "error" ? (
+            <TipResult
+              status={step === "success" ? "success" : "error"}
+              txHash={txHash ?? undefined}
+              amount={amount}
+              creator={creator}
+              errorMessage={error ?? undefined}
+              onPrimaryAction={reset}
+            />
+          ) : (
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <TipAmountInput amount={amount} onChange={setAmount} balance={creator.balance} />
 
             <Textarea
               label="Message"
@@ -108,12 +120,12 @@ const TipPage: React.FC = () => {
               {connected ? (
                 <Button
                   type="submit"
-                  loading={sending}
+                  loading={step === "signing" || step === "submitting"}
                   icon={<HeartHandshake size={18} />}
                   iconRight={<ArrowRight size={18} />}
                   className="sm:flex-1"
                 >
-                  Send tip
+                  {step === "confirm" ? "Continue" : "Send tip"}
                 </Button>
               ) : (
                 <Button
@@ -130,14 +142,33 @@ const TipPage: React.FC = () => {
                 Clear
               </Button>
             </div>
-          </form>
+            </form>
+          )}
 
-          <TransactionStatus
-            status={txStatus}
-            txHash={txHash ?? undefined}
-            errorMessage={error ?? undefined}
-            onRetry={() => void sendTip(creator.owner, amount, message)}
-          />
+          {step === "confirm" && (
+            <div className="space-y-3 border-2 border-black bg-yellow-50 p-4">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-600">Confirm tip</p>
+              <p className="text-sm font-bold text-gray-700">
+                You are about to send {amount} XLM to @{creator.username}.
+              </p>
+              <div className="flex gap-2">
+                <Button type="button" onClick={() => void confirmAndSign()} icon={<HeartHandshake size={16} />}>
+                  Confirm and sign
+                </Button>
+                <Button type="button" variant="outline" onClick={reset}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === "signing" || step === "submitting" ? (
+            <TransactionStatus
+              status={step === "signing" ? "signing" : "submitting"}
+              txHash={txHash ?? undefined}
+              errorMessage={error ?? undefined}
+            />
+          ) : null}
         </Card>
       </section>
 

@@ -32,7 +32,7 @@ mod test;
 use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
 
 use crate::errors::ContractError;
-use crate::types::{ContractStats, CreditTier, LeaderboardEntry, Profile, Tip};
+use crate::types::{ContractStats, CreditBreakdown, CreditTier, LeaderboardEntry, Profile, Tip};
 
 #[contract]
 pub struct TipzContract;
@@ -196,6 +196,14 @@ impl TipzContract {
     /// `address`.
     pub fn get_credit_tier(env: Env, address: Address) -> Result<(u32, CreditTier), ContractError> {
         credit::get_credit_tier(&env, &address)
+    }
+
+    /// Return the weighted credit score breakdown for a registered profile.
+    pub fn get_credit_breakdown(
+        env: Env,
+        address: Address,
+    ) -> Result<CreditBreakdown, ContractError> {
+        credit::get_credit_breakdown(&env, &address)
     }
 
     // ──────────────────────────────────────────────
