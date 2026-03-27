@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ArrowRight, HeartHandshake, MessageSquare, Wallet } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
@@ -13,6 +13,7 @@ import Input from "../../components/ui/Input";
 import Textarea from "../../components/ui/Textarea";
 import { useTipz, useWallet } from "../../hooks";
 import { mockProfile, mockTips } from "../mockData";
+import TipPageSkeleton from "./TipPageSkeleton";
 
 const TipPage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
@@ -20,6 +21,15 @@ const TipPage: React.FC = () => {
   const { sendTip, txHash, txStatus, error, sending, reset } = useTipz();
   const [amount, setAmount] = useState("5");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate initial loading to demonstrate the skeleton
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const creator = {
     ...mockProfile,
@@ -32,6 +42,10 @@ const TipPage: React.FC = () => {
     event.preventDefault();
     await sendTip(creator.owner, amount, message);
   };
+
+  if (loading) {
+    return <TipPageSkeleton />;
+  }
 
   return (
     <PageContainer maxWidth="xl" className="space-y-8 py-10">
