@@ -44,21 +44,37 @@ pub fn get_tip(env: &Env, tip_id: u32) -> Option<Tip> {
     env.storage().temporary().get(&DataKey::Tip(tip_id))
 }
 
-/// Return up to `count` recent tips received by `creator`, newest first.
-pub fn get_recent_tips(env: &Env, creator: &Address, count: u32) -> Vec<Tip> {
-    let tip_count = storage::get_tip_count(env);
+/// Maximum number of tips returned per page.
+const MAX_PAGE_LIMIT: u32 = 50;
+
+/// Return up to `limit` recent tips received by `creator`, newest first,
+/// starting from `offset` entries back in the creator's tip index.
+///
+/// - `limit` is capped at 50.
+/// - `offset` of 0 means start from the most recent tip.
+/// - Expired tips are silently skipped; the result may contain fewer entries.
+pub fn get_recent_tips(env: &Env, creator: &Address, limit: u32, offset: u32) -> Vec<Tip> {
+    let limit = if limit > MAX_PAGE_LIMIT {
+        MAX_PAGE_LIMIT
+    } else {
+        limit
+    };
+    let count = storage::get_creator_tip_count(env, creator);
     let mut result = Vec::new(env);
     let mut found = 0_u32;
-    let mut index = tip_count;
 
-    while index > 0 && found < count {
+    // Start iterating from (count - offset) downward
+    let start = if offset >= count { 0 } else { count - offset };
+    let mut index = start;
+
+    while index > 0 && found < limit {
         index -= 1;
-        if let Some(tip) = env
+        if let Some(tip_id) = env
             .storage()
             .temporary()
-            .get::<DataKey, Tip>(&DataKey::Tip(index))
+            .get::<DataKey, u32>(&DataKey::CreatorTip(creator.clone(), index))
         {
-            if tip.creator == *creator {
+            if let Some(tip) = get_tip(env, tip_id) {
                 result.push_back(tip);
                 found += 1;
             }
@@ -145,6 +161,7 @@ pub fn send_tip(
 
     let tip_id = store_tip(env, tipper, creator, amount, message.clone());
     storage::add_tipper_tip(env, tipper, tip_id);
+    storage::add_creator_tip(env, creator, tip_id);
     let timestamp = env.ledger().timestamp();
 
     // Security: checked accumulation prevents silent i128 overflow.

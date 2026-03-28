@@ -527,3 +527,117 @@ fn test_get_tips_by_tipper_isolates_tippers() {
     assert_eq!(tips2.len(), 1);
     assert_eq!(tips2.get(0).unwrap().amount, 20_000_000);
 }
+
+// ── get_recent_tips pagination ──────────────────────────────────────────────
+
+#[test]
+fn test_get_recent_tips_returns_newest_first() {
+    let (env, client, _contract_id, tipper, creator, _sac) = setup_env();
+
+    let msg = String::from_str(&env, "tip");
+    client.send_tip(&tipper, &creator, &10_000_000, &msg);
+    client.send_tip(&tipper, &creator, &20_000_000, &msg);
+    client.send_tip(&tipper, &creator, &30_000_000, &msg);
+
+    let tips = client.get_recent_tips(&creator, &10, &0);
+    assert_eq!(tips.len(), 3);
+    assert_eq!(tips.get(0).unwrap().amount, 30_000_000);
+    assert_eq!(tips.get(1).unwrap().amount, 20_000_000);
+    assert_eq!(tips.get(2).unwrap().amount, 10_000_000);
+}
+
+#[test]
+fn test_get_recent_tips_offset_skips_newest() {
+    let (env, client, _contract_id, tipper, creator, _sac) = setup_env();
+
+    let msg = String::from_str(&env, "tip");
+    client.send_tip(&tipper, &creator, &10_000_000, &msg);
+    client.send_tip(&tipper, &creator, &20_000_000, &msg);
+    client.send_tip(&tipper, &creator, &30_000_000, &msg);
+    client.send_tip(&tipper, &creator, &40_000_000, &msg);
+
+    // Skip the 2 newest, get next 2
+    let tips = client.get_recent_tips(&creator, &2, &2);
+    assert_eq!(tips.len(), 2);
+    assert_eq!(tips.get(0).unwrap().amount, 20_000_000);
+    assert_eq!(tips.get(1).unwrap().amount, 10_000_000);
+}
+
+#[test]
+fn test_get_recent_tips_limit_capped_at_50() {
+    let (env, client, _contract_id, tipper, creator, _sac) = setup_env();
+
+    let msg = String::from_str(&env, "tip");
+    // Send 3 tips but request 100 — should return all 3 (capped internally)
+    client.send_tip(&tipper, &creator, &10_000_000, &msg);
+    client.send_tip(&tipper, &creator, &20_000_000, &msg);
+    client.send_tip(&tipper, &creator, &30_000_000, &msg);
+
+    let tips = client.get_recent_tips(&creator, &100, &0);
+    assert_eq!(tips.len(), 3);
+}
+
+#[test]
+fn test_get_recent_tips_offset_beyond_count_returns_empty() {
+    let (env, client, _contract_id, tipper, creator, _sac) = setup_env();
+
+    let msg = String::from_str(&env, "tip");
+    client.send_tip(&tipper, &creator, &10_000_000, &msg);
+
+    let tips = client.get_recent_tips(&creator, &10, &100);
+    assert_eq!(tips.len(), 0);
+}
+
+#[test]
+fn test_get_recent_tips_empty_for_no_tips() {
+    let (_env, client, _contract_id, _tipper, creator, _sac) = setup_env();
+
+    let tips = client.get_recent_tips(&creator, &10, &0);
+    assert_eq!(tips.len(), 0);
+}
+
+#[test]
+fn test_get_creator_tip_count() {
+    let (env, client, _contract_id, tipper, creator, _sac) = setup_env();
+
+    assert_eq!(client.get_creator_tip_count(&creator), 0);
+
+    let msg = String::from_str(&env, "tip");
+    client.send_tip(&tipper, &creator, &10_000_000, &msg);
+    assert_eq!(client.get_creator_tip_count(&creator), 1);
+
+    client.send_tip(&tipper, &creator, &20_000_000, &msg);
+    assert_eq!(client.get_creator_tip_count(&creator), 2);
+}
+
+#[test]
+fn test_get_recent_tips_pagination_full_walk() {
+    let (env, client, _contract_id, tipper, creator, _sac) = setup_env();
+
+    let msg = String::from_str(&env, "tip");
+    // Send 5 tips
+    for i in 1..=5 {
+        client.send_tip(&tipper, &creator, &(i * 10_000_000), &msg);
+    }
+
+    // Page 1: offset 0, limit 2 → tips 5, 4
+    let page1 = client.get_recent_tips(&creator, &2, &0);
+    assert_eq!(page1.len(), 2);
+    assert_eq!(page1.get(0).unwrap().amount, 50_000_000);
+    assert_eq!(page1.get(1).unwrap().amount, 40_000_000);
+
+    // Page 2: offset 2, limit 2 → tips 3, 2
+    let page2 = client.get_recent_tips(&creator, &2, &2);
+    assert_eq!(page2.len(), 2);
+    assert_eq!(page2.get(0).unwrap().amount, 30_000_000);
+    assert_eq!(page2.get(1).unwrap().amount, 20_000_000);
+
+    // Page 3: offset 4, limit 2 → tip 1
+    let page3 = client.get_recent_tips(&creator, &2, &4);
+    assert_eq!(page3.len(), 1);
+    assert_eq!(page3.get(0).unwrap().amount, 10_000_000);
+
+    // Page 4: offset 5, limit 2 → empty
+    let page4 = client.get_recent_tips(&creator, &2, &5);
+    assert_eq!(page4.len(), 0);
+}
