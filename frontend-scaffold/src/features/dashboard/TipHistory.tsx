@@ -4,7 +4,7 @@ import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import Pagination from '@/components/ui/Pagination';
 import Table from '@/components/ui/Table';
-import { truncateString } from '@/helpers/format';
+import { truncateString, stroopToXlm } from '@/helpers/format';
 import { getExplorerTxUrl } from '@/helpers/network';
 import { useTips } from '../../hooks/useTips';
 import { useWalletStore } from '../../store/walletStore';
@@ -73,7 +73,7 @@ const TipHistory: React.FC = () => {
     return {
       date: formatDate(tip.timestamp),
       from: truncateString(tip.from),
-      amount: (Number(tip.amount) / 1e7).toFixed(2),
+      amount: stroopToXlm(tip.amount),
       message: tip.message || 'No message',
       txHash: (
         <a
@@ -94,7 +94,7 @@ const TipHistory: React.FC = () => {
     const exportRows = filteredAndSorted.map(tip => ({
       date: formatDate(tip.timestamp),
       from: tip.from,
-      amount: (Number(tip.amount) / 1e7).toFixed(2),
+      amount: stroopToXlm(tip.amount),
       message: tip.message || '',
       txHash: `T-${tip.timestamp.toString(16).toUpperCase()}`
     }));
