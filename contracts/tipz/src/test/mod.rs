@@ -3,6 +3,7 @@
 mod test_admin;
 mod test_config;
 mod test_credit;
+mod test_deregister;
 mod test_events;
 mod test_init;
 mod test_integration;

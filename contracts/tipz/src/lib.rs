@@ -38,7 +38,7 @@ use crate::types::{
 
 /// The current contract interface version, stored on-chain during initialization.
 /// Must be incremented manually in source when the contract interface changes.
-const CONTRACT_VERSION: u32 = 1;
+pub const CONTRACT_VERSION: u32 = 1;
 
 #[contract]
 pub struct TipzContract;
@@ -96,6 +96,28 @@ impl TipzContract {
         x_handle: Option<String>,
     ) -> Result<(), ContractError> {
         profile::update_profile(&env, caller, display_name, bio, image_url, x_handle)
+    }
+
+    /// Deregister the caller's profile, permanently removing it from the platform.
+    ///
+    /// # Requirements
+    /// - Caller must have a registered profile
+    /// - Caller's balance must be zero (all tips withdrawn)
+    /// - Contract must not be paused
+    ///
+    /// # Effects
+    /// - Removes profile from persistent storage
+    /// - Removes username reverse-lookup entry
+    /// - Removes creator from leaderboard (if present)
+    /// - Decrements total creators counter
+    /// - Emits ProfileDeregistered event
+    ///
+    /// # Errors
+    /// - [`ContractError::NotRegistered`] - Caller has no profile
+    /// - [`ContractError::BalanceNotZero`] - Caller has unwithdrawn tips
+    /// - [`ContractError::ContractPaused`] - Contract is paused
+    pub fn deregister_profile(env: Env, caller: Address) -> Result<(), ContractError> {
+        profile::deregister_profile(&env, caller)
     }
 
     /// Update X (Twitter) metrics for a creator (admin only).

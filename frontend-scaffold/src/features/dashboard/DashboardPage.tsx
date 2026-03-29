@@ -1,6 +1,6 @@
-import React from "react";
-import { LayoutDashboard, Wallet } from "lucide-react";
-import { Link } from "react-router-dom";
+import React from 'react';
+import { ArrowUpRight, Coins, LayoutDashboard, Wallet, QrCode, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import PageContainer from "@/components/layout/PageContainer";
 import WalletConnect from "@/components/shared/WalletConnect";
@@ -14,16 +14,25 @@ import { useWalletStore } from "@/store/walletStore";
 import ErrorState from "@/components/shared/ErrorState";
 import { categorizeError } from "@/helpers/error";
 
+import EarningsChart from "./EarningsChart";
 import EarningsTab from "./EarningsTab";
 import OverviewTab from "./OverviewTab";
 import SettingsTab from "./SettingsTab";
 import TipsTab from "./TipsTab";
+import { useWalletStore } from "../../store/walletStore";
+import { useDashboard, usePageTitle } from "../../hooks";
 
 const DashboardPage: React.FC = () => {
   usePageTitle("Dashboard");
 
   const { connected } = useWalletStore();
-  const { profile, tips, stats, loading, error, refetch } = useDashboard();
+  const { profile, tips, loading, error, refetch } = useDashboard();
+
+  const displayTips = tips;
+  const tipsPreviewPages = Math.max(
+    1,
+    Math.ceil(displayTips.length / TIPS_PREVIEW),
+  );
 
   if (!connected) {
     return (
@@ -125,7 +134,7 @@ const DashboardPage: React.FC = () => {
       id: "earnings",
       label: "Earnings",
       content: (
-        <EarningsTab profile={creator} stats={stats} loading={loading} />
+        <EarningsTab />
       ),
     },
     {

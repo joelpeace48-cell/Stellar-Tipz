@@ -8,18 +8,15 @@ import CreditBadge from "../../components/shared/CreditBadge";
 import TipCard from "../../components/shared/TipCard";
 import { StatCard } from "../../components/ui/StartCard";
 import EmptyState from "../../components/ui/EmptyState";
-import { Profile, Tip } from "../../types";
 import QuickActions from "./QuickActions";
 import WithdrawModal from "./WithdrawModal";
-
-interface OverviewTabProps {
-  profile: Profile;
-  tips: Tip[];
-}
+import { useDashboard } from "../../hooks/useDashboard";
+import Loader from "../../components/ui/Loader";
+import { Tip } from "../../types/contract";
 
 // Build a simple 7-day bar chart dataset from tips
 function buildWeeklyChart(tips: Tip[]) {
-  const days = Array.from({ length: 7 }, (_, i: number) => {
+  const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
     return {
@@ -28,9 +25,9 @@ function buildWeeklyChart(tips: Tip[]) {
     };
   });
 
-  const now = Date.now();
-  tips.forEach((tip) => {
-    const daysAgo = Math.floor((now - tip.timestamp * 1000) / (1000 * 60 * 60 * 24));
+  const now = Math.floor(Date.now() / 1000);
+  tips.forEach((tip: Tip) => {
+    const daysAgo = Math.floor((now - tip.timestamp) / (60 * 60 * 24));
     const idx = 6 - daysAgo;
     if (idx >= 0 && idx < 7) {
       days[idx].total += Number(tip.amount);
@@ -43,18 +40,52 @@ function buildWeeklyChart(tips: Tip[]) {
 // Weekly tips count (tips received in the past 7 days)
 function countThisWeek(tips: Tip[]) {
   const cutoff = Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60;
-  return tips.filter((t) => t.timestamp >= cutoff).length;
+  return tips.filter((t: Tip) => t.timestamp >= cutoff).length;
 }
 
-// Stroop → display XLM string (no BigNumber dep needed here)
+// Stroop → display XLM string
 function stroopsToDisplay(stroops: string): string {
   const xlm = Number(stroops) / 1e7;
   return xlm.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
-const OverviewTab: React.FC<OverviewTabProps> = ({ profile, tips }) => {
+const OverviewTab: React.FC = () => {
+  const { profile, tips, stats, loading, error } = useDashboard();
   const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const weeklyData = useMemo(() => buildWeeklyChart(tips), [tips]);
+
+  if (loading && !profile) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <Loader size="lg" text="Loading dashboard data..." />
+      </div>
+    );
+  }
+
+  if (error && !profile) {
+    return (
+      <div className="py-20">
+        <EmptyState 
+          title="Something went wrong" 
+          description={error}
+          action={{ label: "Retry", onClick: () => window.location.reload() }}
+        />
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="py-20">
+        <EmptyState 
+          title="Profile not found" 
+          description="It looks like you haven't registered a creator profile yet."
+          action={{ label: "Create Profile", onClick: () => {} }} // Handled by dashboard tabs or modal
+        />
+      </div>
+    );
+  }
+
+  const weeklyData = buildWeeklyChart(tips);
   const maxBar = Math.max(...weeklyData.map((d) => d.total), 1);
   const tipLink = `${window.location.origin}/@${profile.username}`;
 
@@ -66,13 +97,13 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ profile, tips }) => {
           label="Total Earned"
           value={`${stroopsToDisplay(profile.totalTipsReceived)} XLM`}
           icon={<TrendingUp size={22} />}
-          change={{ value: 14, positive: true }}
+          change={{ value: 0, positive: true }} // In future, calculate from tip delta
         />
         <StatCard
           label="Tips This Week"
           value={countThisWeek(tips).toString()}
           icon={<Coins size={22} />}
-          change={{ value: 8, positive: true }}
+          change={{ value: 0, positive: true }}
         />
         <StatCard
           label="Current Balance"
@@ -152,7 +183,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ profile, tips }) => {
       <WithdrawModal
         isOpen={withdrawOpen}
         balance={profile.balance}
-        feeBps={200}
+        feeBps={stats?.feeBps || 200}
         onClose={() => setWithdrawOpen(false)}
       />
     </div>
