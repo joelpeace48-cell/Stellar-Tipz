@@ -6,6 +6,9 @@ import HowItWorksSection from './HowItWorksSection';
 import StatsSection from './StatsSection';
 import TopCreatorsSection from './TopCreatorsSection';
 import CTASection from './CTASection';
+import { usePageTitle } from '@/hooks/usePageTitle';
+
+import ErrorBoundary from '@/components/shared/ErrorBoundary';
 
 /**
  * Landing page assembled from individual section components.
@@ -13,6 +16,8 @@ import CTASection from './CTASection';
  * even when the contract is not yet deployed.
  */
 const LandingPage: React.FC = () => {
+  usePageTitle('Stellar Tipz \u2014 Decentralized Tipping on Stellar');
+
   return (
     <div className="min-h-screen bg-white">
       <HeroSection />
@@ -23,9 +28,13 @@ const LandingPage: React.FC = () => {
         <HowItWorksSection />
       </section>
       <Divider />
-      <StatsSection />
+      <ErrorBoundary>
+        <StatsSection />
+      </ErrorBoundary>
       <Divider />
-      <TopCreatorsSection />
+      <ErrorBoundary>
+        <TopCreatorsSection />
+      </ErrorBoundary>
       <Divider />
       <CTASection />
     </div>
